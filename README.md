@@ -19,7 +19,6 @@ Aplicação web responsiva em português para cadastro de produtos, consulta de 
 
 Para preencher o banco com produtos e movimentações de exemplo, execute `npm run db:seed-demo`. Os SKUs começam com `DEMO-` e as observações com `TESTE:`. O comando pode ser repetido sem duplicar as movimentações de demonstração.
 
-Em desenvolvimento, o acesso de teste sem Google pode ser ativado com `ENABLE_DEV_LOGIN=true` no `.env`. O botão entra como o usuário de demonstração sem senha e a API nunca oferece essa rota quando `NODE_ENV=production`.
 
 ## Funcionalidades
 

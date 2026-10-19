@@ -42,16 +42,7 @@ app.get('/auth/google/callback', async (req, res) => {
 });
 app.post('/auth/logout', (req, res) => req.session.destroy(err => { if (err) return res.status(500).json({ error: 'Não foi possível encerrar a sessão.' }); res.clearCookie('estoque.sid'); res.json({ ok: true }); }));
 const auth = (req: express.Request, res: express.Response, next: express.NextFunction) => req.session.user ? next() : res.status(401).json({ error: 'Entre com sua conta Google para continuar.' });
-const devLoginEnabled = () => process.env.NODE_ENV !== 'production' && process.env.ENABLE_DEV_LOGIN === 'true';
-app.get('/api/me', (req, res) => res.json({ user: req.session.user || null, googleConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET), devLoginEnabled: devLoginEnabled() }));
-app.post('/auth/dev-login', async (req, res) => {
-  if (!devLoginEnabled()) return res.status(404).json({ error: 'Login de teste desativado.' });
-  const [rows] = await pool.execute<any[]>('SELECT id,name,email,picture FROM users WHERE google_id=?', ['seed-demo-user']);
-  if (!rows.length) return res.status(404).json({ error: 'Usuário de demonstração não encontrado. Execute npm run db:seed-demo.' });
-  await new Promise<void>((resolve, reject) => req.session.regenerate(err => err ? reject(err) : resolve()));
-  req.session.user = rows[0];
-  res.json({ user: rows[0] });
-});
+app.get('/api/me', (req, res) => res.json({ user: req.session.user || null, googleConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) }));
 app.get('/api/dashboard', auth, async (req, res) => {
   const [summary] = await pool.execute<any[]>('SELECT COUNT(*) totalProducts, COALESCE(SUM(quantity),0) totalUnits, COALESCE(SUM(quantity*cost),0) stockValue, SUM(CASE WHEN quantity <= minimum_quantity THEN 1 ELSE 0 END) lowStock FROM products WHERE active=1');
   const [recent] = await pool.execute<any[]>('SELECT m.id,m.type,m.quantity,m.note,m.created_at createdAt,p.name product,p.sku,u.name user FROM movements m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.user_id ORDER BY m.created_at DESC LIMIT 8');
