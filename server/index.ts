@@ -5,11 +5,16 @@ import MySQLStoreFactory from 'express-mysql-session';
 import mysql from 'mysql2/promise';
 import { OAuth2Client } from 'google-auth-library';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const app = express();
 const port = Number(process.env.PORT || 3000);
 if (process.env.NODE_ENV === 'production' && (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 32)) throw new Error('Configure um SESSION_SECRET com pelo menos 32 caracteres em produção.');
-const pool = mysql.createPool({ host: process.env.MYSQL_HOST || 'localhost', port: Number(process.env.MYSQL_PORT || 3306), user: process.env.MYSQL_USER || 'root', password: process.env.MYSQL_PASSWORD || '', database: process.env.MYSQL_DATABASE || 'controle_estoque', waitForConnections: true, connectionLimit: 10, decimalNumbers: true, dateStrings: true });
+if (process.env.NODE_ENV === 'production') app.set('trust proxy', 1);
+const mysqlSslCa = process.env.MYSQL_SSL_CA;
+const pool = mysql.createPool({ host: process.env.MYSQL_HOST || 'localhost', port: Number(process.env.MYSQL_PORT || 3306), user: process.env.MYSQL_USER || 'root', password: process.env.MYSQL_PASSWORD || '', database: process.env.MYSQL_DATABASE || 'controle_estoque', waitForConnections: true, connectionLimit: 10, decimalNumbers: true, dateStrings: true, ...(mysqlSslCa ? { ssl: { ca: fs.readFileSync(mysqlSslCa, 'utf8'), rejectUnauthorized: true } } : {}) });
 const Store = MySQLStoreFactory(session);
 const sessionStore = new Store({}, pool as any);
 const oauth = new OAuth2Client(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET, process.env.GOOGLE_CALLBACK_URL);
@@ -41,6 +46,7 @@ app.get('/auth/google/callback', async (req, res) => {
   } catch (error) { console.error('Falha no login Google:', error); res.status(500).send('Falha ao concluir o login. Confira as configurações e tente novamente.'); }
 });
 app.post('/auth/logout', (req, res) => req.session.destroy(err => { if (err) return res.status(500).json({ error: 'Não foi possível encerrar a sessão.' }); res.clearCookie('estoque.sid'); res.json({ ok: true }); }));
+app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 const auth = (req: express.Request, res: express.Response, next: express.NextFunction) => req.session.user ? next() : res.status(401).json({ error: 'Entre com sua conta Google para continuar.' });
 app.get('/api/me', (req, res) => res.json({ user: req.session.user || null, googleConfigured: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) }));
 app.get('/api/dashboard', auth, async (req, res) => {
@@ -90,5 +96,10 @@ app.post('/api/movements', auth, async (req, res) => {
     await conn.commit(); res.status(201).json({ ok: true });
   } catch (e) { await conn.rollback(); throw e; } finally { conn.release(); }
 });
+if (process.env.NODE_ENV === 'production') {
+  const distPath = fileURLToPath(new URL('../dist', import.meta.url));
+  if (!fs.existsSync(path.join(distPath, 'index.html'))) throw new Error('Build do frontend não encontrado. Execute "pnpm run build" antes de iniciar em produção.');
+  app.use(express.static(distPath, { index: 'index.html', maxAge: '1h' }));
+}
 app.use((error:any, _req:express.Request, res:express.Response, _next:express.NextFunction) => { console.error(error); res.status(500).json({ error: 'Ocorreu um erro no servidor.' }); });
 app.listen(port, () => console.log(`API de estoque disponível na porta ${port}`));

@@ -3,7 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {"node": ">=22.12.0 <23"},
   "scripts": {"dev":"concurrently \"tsx watch server/index.ts\" \"vite --host 0.0.0.0\"","dev:server":"tsx watch server/index.ts","dev:client":"vite --host 0.0.0.0","build":"vite build","start":"tsx server/index.ts","db:setup":"node scripts/init-db.mjs","db:seed-demo":"node scripts/seed-demo.mjs"},
-  "dependencies": {"@vitejs/plugin-react":"latest","concurrently":"latest","dotenv":"latest","express":"latest","express-session":"latest","express-mysql-session":"latest","google-auth-library":"latest","mysql2":"latest","react":"latest","react-dom":"latest","vite":"latest"},
-  "devDependencies": {"tsx":"latest","typescript":"latest"}
+  "dependencies": {"@vitejs/plugin-react":"latest","concurrently":"latest","dotenv":"latest","express":"latest","express-session":"latest","express-mysql-session":"latest","google-auth-library":"latest","mysql2":"latest","react":"latest","react-dom":"latest","vite":"latest","tsx":"4.23.15"},
+  "devDependencies": {"typescript":"latest"}
 }

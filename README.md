@@ -30,3 +30,18 @@ Para preencher o banco com produtos e movimentações de exemplo, execute `npm r
 ## Produção
 
 Configure HTTPS, um `SESSION_SECRET` seguro, as URLs OAuth de produção e `APP_URL`; restrinja `GOOGLE_ALLOWED_EMAILS`; use um gerenciador de processos para a API e sirva o diretório `dist` por um servidor web. Configure também política de backup e acesso do usuário MySQL com permissões mínimas.
+
+## Publicação no Render
+
+O servidor Express entrega o frontend compilado e a API pelo mesmo domínio em produção. O endpoint `/healthz` pode ser usado como verificação de saúde do serviço. O banco MySQL deve ser hospedado separadamente; o Render não oferece MySQL gerenciado.
+
+1. Envie este repositório para o GitHub, incluindo `pnpm-lock.yaml` e `render.yaml`. O arquivo `.env` já é ignorado pelo Git; nunca publique suas credenciais.
+2. No Render, escolha **New > Blueprint** e conecte o repositório. Revise o serviço web antes de aplicar. O blueprint usa o plano gratuito; troque para um plano pago se precisar evitar suspensão por inatividade.
+3. Crie ou escolha um MySQL acessível pela internet. No painel do banco, crie o schema executando `database/schema.sql` e guarde host, porta, usuário, senha e nome do banco. Libere conexões de saída do Render conforme as regras do provedor MySQL.
+4. No serviço web do Render, configure `APP_URL` como a URL HTTPS pública do serviço. Configure `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` e `MYSQL_DATABASE` com os dados do banco. Se o banco exigir TLS, adicione o certificado CA como **Secret File** no Render e defina `MYSQL_SSL_CA` para o caminho montado, por exemplo `/etc/secrets/mysql-ca.pem`.
+5. Defina `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `GOOGLE_ALLOWED_EMAILS`. Use uma lista de e-mails autorizados separada por vírgulas. Gere um segredo aleatório forte para `SESSION_SECRET` (ao menos 32 caracteres). Não defina `PORT`; o Render fornece essa variável.
+6. No cliente OAuth do Google Cloud, cadastre a URL base do Render em **Origens JavaScript autorizadas** e `https://SEU-DOMINIO/auth/google/callback` em **URIs de redirecionamento autorizados**. A URL precisa corresponder exatamente ao domínio e caminho configurados em `GOOGLE_CALLBACK_URL`.
+7. Configure `GOOGLE_CALLBACK_URL` com a URL pública completa, por exemplo `https://estoque-exemplo.onrender.com/auth/google/callback`. Salve as variáveis e faça um novo deploy.
+8. Abra `/healthz` no domínio publicado e depois valide login Google, leitura do dashboard, cadastro/edição de produto e uma movimentação. Faça um backup do banco antes de inserir dados reais.
+
+Comandos configurados no blueprint: build `pnpm install --frozen-lockfile --prod=false && pnpm run build`; start `pnpm start`; verificação de saúde `/healthz`. O script `db:seed-demo` existe apenas para dados de demonstração; não o execute no banco de produção.

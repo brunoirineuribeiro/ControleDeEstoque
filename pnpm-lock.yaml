@@ -38,13 +38,13 @@ importers:
       react-dom:
         specifier: latest
         version: 19.3.0(react@19.3.0)
+      tsx:
+        specifier: 4.23.15
+        version: 4.23.15
       vite:
         specifier: latest
         version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(tsx@4.23.15)
     devDependencies:
-      tsx:
-        specifier: latest
-        version: 4.23.15
       typescript:
         specifier: latest
         version: 7.0.2
