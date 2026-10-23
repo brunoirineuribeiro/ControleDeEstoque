@@ -4,17 +4,17 @@ Aplicação web responsiva em português para cadastro de produtos, consulta de 
 
 ## Requisitos
 
-- Node.js 20 ou superior e npm (ou pnpm).
+- Node.js 22.12 ou superior na linha 22 e pnpm 11.25.0.
 - MySQL 8.0 ou superior.
 - Credenciais OAuth 2.0 de um cliente Google do tipo Aplicativo da Web.
 
 ## Configuração
 
-1. Copie `.env.example` para `.env` e preencha os dados do MySQL, um `SESSION_SECRET` aleatório e as chaves OAuth do Google.
-2. Inicialize banco e tabelas com `npm run db:setup` (ou execute `database/schema.sql` no MySQL).
+1. Copie `.env.example` para `.env` e preencha os dados do MySQL, um `SESSION_SECRET` aleatório, as chaves OAuth do Google e o e-mail do primeiro administrador em `ADMIN_EMAILS`.
+2. Inicialize banco e tabelas com `pnpm run db:setup` (ou execute `database/schema.sql` no MySQL). O comando cria o primeiro administrador configurado em `ADMIN_EMAILS`.
 3. No Google Cloud Console, habilite Google Identity, configure a origem autorizada `http://localhost:5173` e o URI de redirecionamento `http://localhost:3000/auth/google/callback`.
-4. Opcional: defina `GOOGLE_ALLOWED_EMAILS` com e-mails separados por vírgula para restringir o acesso. Vazio permite qualquer conta Google com e-mail verificado.
-5. Instale dependências com `npm install` e inicie a aplicação com `npm run dev`.
+4. Somente e-mails cadastrados em **Usuários** podem entrar. Para enviar convites, configure `RESEND_API_KEY` e `EMAIL_FROM` com um domínio remetente verificado no Resend.
+5. Instale dependências com `pnpm install` e inicie a aplicação com `pnpm run dev`.
 6. Acesse `http://localhost:5173`. A API roda em `http://localhost:3000`.
 
 Para preencher o banco com produtos e movimentações de exemplo, execute `npm run db:seed-demo`. Os SKUs começam com `DEMO-` e as observações com `TESTE:`. O comando pode ser repetido sem duplicar as movimentações de demonstração.
@@ -22,14 +22,15 @@ Para preencher o banco com produtos e movimentações de exemplo, execute `npm r
 
 ## Funcionalidades
 
-- Login Google com verificação do e-mail, proteção de estado OAuth, sessão no MySQL e allowlist opcional.
+- Login Google com verificação do e-mail, proteção de estado OAuth, sessão no MySQL e autorização baseada nos e-mails ativos cadastrados.
 - Dashboard inicial com indicadores de estoque, pesquisa de produtos, gráfico de movimentações, alerta de estoque baixo e atividade recente.
 - Produtos: busca por nome, SKU e categoria, filtros por status/estoque, CRUD e edição em modal. Produtos com histórico não podem ser apagados; podem ser desativados.
 - Movimentações: busca por produto/SKU, filtros por tipo e período, entradas e saídas. Cada movimento e atualização de saldo são atômicos; saídas acima do saldo disponível são recusadas.
+- Usuários: CRUD de acessos, perfis de administrador/usuário, ativação e revogação de acesso, convites por e-mail e bloqueio de login para e-mails não cadastrados. A tela e as rotas administrativas são restritas a administradores ativos.
 
 ## Produção
 
-Configure HTTPS, um `SESSION_SECRET` seguro, as URLs OAuth de produção e `APP_URL`; restrinja `GOOGLE_ALLOWED_EMAILS`; use um gerenciador de processos para a API e sirva o diretório `dist` por um servidor web. Configure também política de backup e acesso do usuário MySQL com permissões mínimas.
+Configure HTTPS, um `SESSION_SECRET` seguro, as URLs OAuth de produção, `APP_URL`, `ADMIN_EMAILS`, `RESEND_API_KEY` e `EMAIL_FROM`. Use um gerenciador de processos para a API e sirva o diretório `dist` por um servidor web. Configure também política de backup e acesso do usuário MySQL com permissões mínimas.
 
 ## Publicação no Render
 
@@ -39,7 +40,7 @@ O servidor Express entrega o frontend compilado e a API pelo mesmo domínio em p
 2. No Render, escolha **New > Blueprint** e conecte o repositório. Revise o serviço web antes de aplicar. O blueprint usa o plano gratuito; troque para um plano pago se precisar evitar suspensão por inatividade.
 3. Crie ou escolha um MySQL acessível pela internet. No painel do banco, crie o schema executando `database/schema.sql` e guarde host, porta, usuário, senha e nome do banco. Libere conexões de saída do Render conforme as regras do provedor MySQL.
 4. No serviço web do Render, configure `APP_URL` como a URL HTTPS pública do serviço. Configure `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD` e `MYSQL_DATABASE` com os dados do banco. Se o banco exigir TLS, adicione o certificado CA como **Secret File** no Render e defina `MYSQL_SSL_CA` para o caminho montado, por exemplo `/etc/secrets/mysql-ca.pem`.
-5. Defina `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` e `GOOGLE_ALLOWED_EMAILS`. Use uma lista de e-mails autorizados separada por vírgulas. Gere um segredo aleatório forte para `SESSION_SECRET` (ao menos 32 caracteres). Não defina `PORT`; o Render fornece essa variável.
+5. Defina `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `ADMIN_EMAILS`, `RESEND_API_KEY` e `EMAIL_FROM`. `ADMIN_EMAILS` aceita uma lista separada por vírgulas e deve incluir o primeiro administrador. Gere um segredo aleatório forte para `SESSION_SECRET` (ao menos 32 caracteres). Não defina `PORT`; o Render fornece essa variável.
 6. No cliente OAuth do Google Cloud, cadastre a URL base do Render em **Origens JavaScript autorizadas** e `https://SEU-DOMINIO/auth/google/callback` em **URIs de redirecionamento autorizados**. A URL precisa corresponder exatamente ao domínio e caminho configurados em `GOOGLE_CALLBACK_URL`.
 7. Configure `GOOGLE_CALLBACK_URL` com a URL pública completa, por exemplo `https://estoque-exemplo.onrender.com/auth/google/callback`. Salve as variáveis e faça um novo deploy.
 8. Abra `/healthz` no domínio publicado e depois valide login Google, leitura do dashboard, cadastro/edição de produto e uma movimentação. Faça um backup do banco antes de inserir dados reais.
