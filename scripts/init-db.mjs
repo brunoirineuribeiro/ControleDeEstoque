@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
 import mysql from 'mysql2/promise';
 
+const database = process.env.MYSQL_DATABASE || 'controle_estoque';
+if (!/^[A-Za-z0-9_]+$/.test(database)) throw new Error('MYSQL_DATABASE deve conter apenas letras, números e sublinhados.');
 const connection = await mysql.createConnection({
   host: process.env.MYSQL_HOST || 'localhost',
   port: Number(process.env.MYSQL_PORT || 3306),
@@ -11,8 +13,15 @@ const connection = await mysql.createConnection({
 });
 
 try {
+  try {
+    await connection.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+  } catch (error) {
+    if (error.code !== 'ER_DBACCESS_DENIED_ERROR') throw error;
+  }
+  await connection.query(`USE \`${database}\``);
   const schema = await readFile(new URL('../database/schema.sql', import.meta.url), 'utf8');
-  await connection.query(schema);
+  const tableSchema = schema.replace(/^CREATE DATABASE IF NOT EXISTS [^;]+;\s*USE [^;]+;\s*/i, '');
+  await connection.query(tableSchema);
   const admins = (process.env.ADMIN_EMAILS || '').split(',').map(email => email.trim().toLowerCase()).filter(Boolean);
   for (const email of admins) {
     await connection.execute(
@@ -34,7 +43,7 @@ try {
       await connection.execute("UPDATE access_users SET role='admin',active=TRUE WHERE email=?", [legacyAllowed[0]]);
     }
   }
-  console.log(`Banco ${process.env.MYSQL_DATABASE || 'controle_estoque'} e tabelas inicializados.`);
+  console.log(`Tabelas do banco ${database} inicializadas.`);
 } finally {
   await connection.end();
 }
