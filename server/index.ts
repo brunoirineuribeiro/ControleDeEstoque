@@ -178,7 +178,7 @@ app.get('/api/dashboard', auth, async (req, res) => {
 });
 app.get('/api/products', auth, async (req, res) => {
   const search = `%${String(req.query.search || '').trim()}%`;
-  const [rows] = await pool.execute('SELECT * FROM products WHERE (? = "%%" OR name LIKE ? OR sku LIKE ? OR category LIKE ?) ORDER BY updated_at DESC', [search, search, search, search]); res.json(rows);
+  const [rows] = await pool.execute("SELECT * FROM products WHERE (? = '%%' OR name LIKE ? OR sku LIKE ? OR category LIKE ?) ORDER BY updated_at DESC", [search, search, search, search]); res.json(rows);
 });
 app.post('/api/products', auth, async (req, res) => {
   const { sku, name, category = 'Geral', unit = 'un', quantity = 0, minimum_quantity = 0, cost = 0 } = req.body || {};
@@ -201,7 +201,7 @@ app.delete('/api/products/:id', auth, async (req, res) => {
 app.get('/api/movements', auth, async (req, res) => {
   const search = `%${String(req.query.search || '').trim()}%`; const type = ['entrada','saida'].includes(String(req.query.type)) ? String(req.query.type) : null;
   const from = String(req.query.from || ''); const to = String(req.query.to || '');
-  const [rows] = await pool.execute('SELECT m.id,m.type,m.quantity,m.note,m.created_at createdAt,p.id productId,p.name product,p.sku,u.name user FROM movements m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.user_id WHERE (p.name LIKE ? OR p.sku LIKE ?) AND (? IS NULL OR m.type=?) AND (? = "" OR DATE(m.created_at)>=?) AND (? = "" OR DATE(m.created_at)<=?) ORDER BY m.created_at DESC LIMIT 300', [search,search,type,type,from,from,to,to]); res.json(rows);
+  const [rows] = await pool.execute("SELECT m.id,m.type,m.quantity,m.note,m.created_at createdAt,p.id productId,p.name product,p.sku,u.name user FROM movements m JOIN products p ON p.id=m.product_id JOIN users u ON u.id=m.user_id WHERE (p.name LIKE ? OR p.sku LIKE ?) AND (? IS NULL OR m.type=?) AND (? = '' OR DATE(m.created_at)>=?) AND (? = '' OR DATE(m.created_at)<=?) ORDER BY m.created_at DESC LIMIT 300", [search,search,type,type,from,from,to,to]); res.json(rows);
 });
 app.post('/api/movements', auth, async (req, res) => {
   const { product_id, type, quantity, note = '' } = req.body || {};

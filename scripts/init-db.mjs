@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { readFile } from 'node:fs/promises';
+import fs from 'node:fs';
 import mysql from 'mysql2/promise';
 
 const database = process.env.MYSQL_DATABASE || 'controle_estoque';
@@ -10,6 +11,10 @@ const connection = await mysql.createConnection({
   user: process.env.MYSQL_USER,
   password: process.env.MYSQL_PASSWORD,
   multipleStatements: true,
+  ...(process.env.MYSQL_SSL === 'true' ? { ssl: {
+    ...(process.env.MYSQL_SSL_CA ? { ca: fs.readFileSync(process.env.MYSQL_SSL_CA, 'utf8') } : {}),
+    rejectUnauthorized: process.env.MYSQL_SSL_VERIFY !== 'false',
+  } } : {}),
 });
 
 try {

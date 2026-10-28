@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import fs from 'node:fs';
 import mysql from 'mysql2/promise';
 
 const db = await mysql.createConnection({
@@ -8,6 +9,10 @@ const db = await mysql.createConnection({
   password: process.env.MYSQL_PASSWORD,
   database: process.env.MYSQL_DATABASE || 'controle_estoque',
   decimalNumbers: true,
+  ...(process.env.MYSQL_SSL === 'true' ? { ssl: {
+    ...(process.env.MYSQL_SSL_CA ? { ca: fs.readFileSync(process.env.MYSQL_SSL_CA, 'utf8') } : {}),
+    rejectUnauthorized: process.env.MYSQL_SSL_VERIFY !== 'false',
+  } } : {}),
 });
 
 const products = [
